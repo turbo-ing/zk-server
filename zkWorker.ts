@@ -2,8 +2,10 @@
 
 import * as Comlink from "comlink";
 import { Field, SelfProof, Proof, JsonProof, ZkProgram, setNumberOfWorkers} from "o1js";
-import { zkProgram } from "./zkProgram";
 import { States, Moves, MAX_MOVES } from './zkLib';
+import { BoardArray, Direction, GameBoardWithSeed, MAX_MOVES2 } from "./game2048ZKLogic";
+import { DirectionMap, MoveType } from "./constants";
+import { Game2048ZKProgram } from "./game2048ZKProgram";
 setNumberOfWorkers(7);
 
 export const zkWorkerAPI = {
@@ -11,7 +13,7 @@ export const zkWorkerAPI = {
   async compileZKProgram() {
     try{
       console.log("[Worker] About to compile ZK program");
-      const result = await zkProgram.compile();
+      const result = await Game2048ZKProgram.compile();
       console.log("[Worker] Compiled ZK program");
       return result;
     } catch (e) {
@@ -22,50 +24,50 @@ export const zkWorkerAPI = {
   },
 
   async baseCase(
-    initState: number,
-    newState: number,
-    moves: number[],
+    initBoard: GameBoardWithSeed,
+    newBoard: GameBoardWithSeed,
+    moves: string[],
   ): Promise<string> {
     //Generate the BoardArray for newBoard.
-    const states = new States(Field(initState), Field(newState))
+    let boardArr: BoardArray = new BoardArray([initBoard, newBoard]);
 
-    const moveArr = moves.map((move)=> Field(move));
+    //Generate the Direction from moves[].
+    const directionsFields = moves.map((move) => {
+      return Field.from(DirectionMap[move as MoveType] ?? 0);
+    });
 
     //Fill out the moves array.
-    if (moveArr.length < MAX_MOVES) {
+    if (directionsFields.length < MAX_MOVES2) {
       // pad with 0
-      for (let i = moveArr.length; i < MAX_MOVES; i++) {
-        moveArr.push(Field.from(0));
+      for (let i = directionsFields.length; i < MAX_MOVES2; i++) {
+        directionsFields.push(Field.from(0));
       }
     }
 
-    const fieldMoves = new Moves(moveArr);
+    const directions = new Direction(directionsFields);
 
+    //Invoke the program function based on the old function.
+    const result = await Game2048ZKProgram.baseCase(boardArr, directions);
 
-    const result = await zkProgram.base(states, fieldMoves);
+    //Difference here: we need to push the new proof to the proof queue
+    //in zkClient, rather than storing it locally here on the worker.
+    console.log("[generateZKProof] Generated proof");
 
+    console.log(result.proof);
+
+    //TODO: sort this out
     return JSON.stringify(result.proof.toJSON());
   },
 
-  async inductiveStep(
-    proof1: string,
-    proof2: string,
-  ): Promise<string> {
-    //console.log(proof1);
-    //console.log(proof2);
-    const proof1a = await ZkProgram.Proof(zkProgram).fromJSON(JSON.parse(proof1));
-    const proof2a = await ZkProgram.Proof(zkProgram).fromJSON(JSON.parse(proof2));
+  async inductiveStep(proofjson1: string, proofjson2: string): Promise<string> {
+    const proof1: SelfProof<void, BoardArray> = await ZkProgram.Proof(
+      Game2048ZKProgram,
+    ).fromJSON(JSON.parse(proofjson1));
+    const proof2: SelfProof<void, BoardArray> = await ZkProgram.Proof(
+      Game2048ZKProgram,
+    ).fromJSON(JSON.parse(proofjson2));
 
-    const state1 = proof1a.publicInput.state1;
-    const state2 = proof2a.publicInput.state2;
-    const states = new States(state1, state2);
-    console.log("[Worker] Pre-inductive:")
-    console.log(states);
-    const result = await zkProgram.inductive(states, proof1a, proof2a);
-    console.log(result);
-    console.log("[Worker] Received result at worker.");
-
-    //Return the result
+    let result = await Game2048ZKProgram.inductiveStep(proof1, proof2);
     return JSON.stringify(result.proof.toJSON());
   },
 }

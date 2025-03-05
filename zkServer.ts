@@ -5,6 +5,7 @@ import { SelfProof, VerificationKey, Field, Proof, ZkProgram, JsonProof, setNumb
 import { MAX_MOVES, MAX_PARALLEL, States } from './zkLib';
 import { zkProgram } from "./zkProgram";
 import { zkWorkerAPI } from "./zkWorker";
+import { GameBoard, GameBoardWithSeed } from "./game2048ZKLogic";
 
 export class ZkServer {
 
@@ -37,8 +38,34 @@ export class ZkServer {
         console.log("[Server] Compiled ZK program");
         return result.verificationKey;
     }
-    async baseCase(initState, newState, moves){
-        return await zkWorkerAPI.baseCase(initState, newState, moves);
+    async baseCaseAux(
+        boardNums0: Number[],
+        seedNum0: string,
+        boardNums1: Number[],
+        seedNum1: string,
+        moves: string[],
+    ): Promise<string> {
+        console.log("on worker [aux]");
+        console.log(boardNums0);
+        console.log(boardNums1);
+        const zkBoardWithSeed0 = this.auxSub(boardNums0, BigInt(seedNum0));
+        const zkBoardWithSeed1 = this.auxSub(boardNums1, BigInt(seedNum1));
+
+        return await zkWorkerAPI.baseCase(zkBoardWithSeed0, zkBoardWithSeed1, moves);
+    }
+
+    auxSub(boardNums: Number[], seedNum: bigint) {
+        console.log("on auxsub");
+        console.log(boardNums);
+        const boardFields = boardNums.map((cell) => Field.from(cell.valueOf()));
+        const zkBoard = new GameBoard(boardFields);
+        const seed = Field.from(seedNum);
+        const zkBoardWithSeed = new GameBoardWithSeed({
+            board: zkBoard,
+            seed,
+        });
+
+        return zkBoardWithSeed;
     }
 
     async inductiveStep(proof1, proof2){

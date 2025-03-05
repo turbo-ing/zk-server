@@ -4,6 +4,7 @@ const cors = require('cors');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 
+import { GameBoardWithSeed } from './game2048ZKLogic';
 import { ZkServer } from './zkServer';
 import { zkWorkerAPI } from './zkWorker';
 
@@ -40,13 +41,21 @@ app.get('/', async (req, res) => {
 // Endpoint to generate proofs
 app.post('/baseCase', async (req, res) => {
   try {
-    const initState : number = req.body.initState
-    const newState : number = req.body.newState
-    const moves = req.body.moves;
+    const boardNums0: Number[] = req.body.boardNums0
+    const seedNum0: string = req.body.seedNum0
+    const boardNums1: Number[] = req.body.boardNums1
+    const seedNum1: string = req.body.seedNum1
+    const moves: string[] = req.body.moves
     console.log(req.body);
     
     // Return the proof and new state
-    const proof = await zkWorkerAPI.baseCase(initState, newState, moves);
+    const proof = await zkServer.baseCaseAux(
+      boardNums0,
+      seedNum0,
+      boardNums1,
+      seedNum1,
+      moves,
+    );
     console.log("[API][baseCase] Proof generated");
     res.status(200).json({ proofJSON: proof });
   } catch (error) {

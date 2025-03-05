@@ -59,7 +59,7 @@ async function run(i: string) {
 async function spawnSubservers(){
     try {
         let r : Promise<void>[] = [];
-        for(let i=3001; i<=3010; i++){ //spawn 10 servers
+        for(let i=3001; i<=3002; i++){ //spawn 10 servers
             r.push(run(i.toString()));
             map[i] = false;
         }
@@ -77,11 +77,12 @@ async function spawnSubservers(){
 // Endpoint to generate proofs
 app.post('/baseCase', async (req, res) => {
   try {
-    const initState : number = req.body.initState
-    const newState : number = req.body.newState
-    const moves = req.body.moves;
+    const boardNums0: Number[] = req.body.boardNums0
+    const seedNum0: string = req.body.seedNum0
+    const boardNums1: Number[] = req.body.boardNums1
+    const seedNum1: string = req.body.seedNum1
+    const moves: string[] = req.body.moves
     console.log(req.body);
-    console.log(initState, newState, moves);
 
     //get free child process port
     let port;
@@ -108,9 +109,11 @@ app.post('/baseCase', async (req, res) => {
         
         // Adding body or contents to send
         body: JSON.stringify({
-            initState: initState,
-            newState: newState,
-            moves: moves,
+          boardNums0: boardNums0,
+          seedNum0: seedNum0,
+          boardNums1: boardNums1,
+          seedNum1: seedNum1,
+          moves: moves,
         }),
         
         // Adding headers to the request
