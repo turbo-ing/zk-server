@@ -59,7 +59,7 @@ async function run(i: string) {
 async function spawnSubservers(){
     try {
         let r : Promise<void>[] = [];
-        for(let i=3001; i<=3002; i++){ //spawn 10 servers
+        for(let i=3001; i<=3005; i++){ //spawn 5 servers
             r.push(run(i.toString()));
             map[i] = false;
         }
