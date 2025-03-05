@@ -26,12 +26,14 @@ async function run(str: string) {
 
 app.get('/', async (req, res) => {
   try {
+    let startTime = Date.now()
     let r : Promise<void>[] = [];
     for(let i=0; i<1000; i++){
       r.push(run(i.toString()));
     };
     await Promise.all(r);
-    res.status(200).json({ message: 'Binary executed successfully' });
+    let totalTime = Date.now() - startTime
+    res.status(200).json({ message: 'Binary executed successfully in ' + (totalTime) + 'ms' });
   } catch (error) {
     console.error('[API] Error executing binary:', error);
     res.status(500).json({ error: 'Failed to execute binary' });
