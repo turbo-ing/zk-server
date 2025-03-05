@@ -24,7 +24,7 @@ async function run(str: string) {
   console.log('['+str+'] stderr:', stderr);
 }
 
-app.get('/', async (req, res) => {
+app.get('/plonky2', async (req, res) => {
   try {
     let startTime = Date.now()
     let r : Promise<void>[] = [];
